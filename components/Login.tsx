@@ -7,6 +7,9 @@ interface LoginProps {
   onLogin: (user: User) => void;
 }
 
+const ADMIN_USERNAME = 'ProMasterYT';
+const ADMIN_PASSWORD = 'ProMasterYT';
+
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
@@ -17,8 +20,22 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
+    const cleanUsername = username.trim();
+    const cleanPassword = password.trim();
+
+    // 🔐 LOGIN ESPECIAL ADMIN (sin depender del storage)
+    if (cleanUsername === ADMIN_USERNAME && cleanPassword === ADMIN_PASSWORD) {
+      const adminUser: User = {
+        username: cleanUsername,
+        password: cleanPassword,
+        role: Role.ADMIN,
+      };
+      onLogin(adminUser);
+      return;
+    }
+
     if (isRegistering) {
-      const newUser: User = { username, password, role: Role.USER };
+      const newUser: User = { username: cleanUsername, password: cleanPassword, role: Role.USER };
       const success = saveUser(newUser);
       if (success) {
         onLogin(newUser);
@@ -26,7 +43,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setError('El usuario ya existe');
       }
     } else {
-      const user = loginUser(username, password);
+      const user = loginUser(cleanUsername, cleanPassword);
       if (user) {
         onLogin(user);
       } else {
@@ -57,6 +74,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
+
           <div>
             <label className="block text-slate-400 text-sm font-medium mb-1">Contraseña</label>
             <input
@@ -81,7 +99,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+            type="button"
+            onClick={() => {
+              setIsRegistering(!isRegistering);
+              setError('');
+            }}
             className="text-slate-400 hover:text-white text-sm transition-colors flex items-center justify-center gap-2 mx-auto"
           >
             <KeyRound size={14} />
