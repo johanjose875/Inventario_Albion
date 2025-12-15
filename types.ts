@@ -7,10 +7,14 @@ export enum ItemCategory {
 }
 
 export enum Rarity {
-  COMMON = 'Común',
-  RARE = 'Raro',
-  EPIC = 'Épico',
-  LEGENDARY = 'Legendario'
+  T1 = 'Tier 1',
+  T2 = 'Tier 2',
+  T3 = 'Tier 3',
+  T4 = 'Tier 4',
+  T5 = 'Tier 5',
+  T6 = 'Tier 6',
+  T7 = 'Tier 7',
+  T8 = 'Tier 8'
 }
 
 export enum Role {
@@ -21,13 +25,13 @@ export enum Role {
 export interface User {
   username: string;
   role: Role;
-  password?: string; // In a real app, this would be hashed. Storing plain for demo.
+  password?: string;
 }
 
 export interface Player {
   id: string;
   name: string;
-  avatarUrl: string;
+  avatarUrl?: string; // Optional now
   role: string;
 }
 
@@ -36,10 +40,10 @@ export interface InventoryItem {
   name: string;
   category: ItemCategory;
   quantity: number;
-  obtainedBy: Player | User; // Can be a game character or a system user
-  dateAcquired: string; // ISO Date string
-  rarity: Rarity;
-  value: number; // Gold value estimate
+  obtainedBy: Player | User; 
+  dateAcquired: string; 
+  rarity: Rarity; // Used for Tier
+  value: number; // Unit Price
 }
 
 export enum MovementType {
@@ -54,14 +58,14 @@ export interface Movement {
   itemName: string;
   type: MovementType;
   quantity: number;
-  user: string; // Username who performed the action
+  user: string;
   date: string;
   reason?: string;
 }
 
 export interface FilterState {
   search: string;
-  category: string; // 'All' or ItemCategory value
-  player: string; // 'All' or Player ID
-  rarity: string; // 'All' or Rarity value
+  category: string; 
+  player: string;
+  rarity: string;
 }

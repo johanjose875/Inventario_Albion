@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { InventoryItem, MovementType, ItemCategory, Rarity } from '../types';
-import { X, ArrowUpRight, ArrowDownLeft, Plus } from 'lucide-react';
+import { X, ArrowUpRight, ArrowDownLeft, Plus, Coins } from 'lucide-react';
 import { updateStock, saveInventoryItem } from '../services/storageService';
+import { formatCurrency } from '../constants';
 
 interface MovementModalProps {
   isOpen: boolean;
@@ -12,25 +13,21 @@ interface MovementModalProps {
 }
 
 const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, currentUser, onSuccess }) => {
-  // Mode state
   const [type, setType] = useState<MovementType>(MovementType.IN);
   const [isNewItem, setIsNewItem] = useState(false);
-
-  // Existing Item State
   const [selectedItemId, setSelectedItemId] = useState('');
 
   // New Item State
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState<ItemCategory>(ItemCategory.MATERIAL);
-  const [newItemRarity, setNewItemRarity] = useState<Rarity>(Rarity.COMMON);
-  const [newItemValue, setNewItemValue] = useState(0);
+  const [newItemRarity, setNewItemRarity] = useState<Rarity>(Rarity.T1);
+  const [unitPrice, setUnitPrice] = useState(0);
 
   // Common State
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
 
-  // Update selected item when items change or modal opens
   useEffect(() => {
     if (items.length > 0) {
       setSelectedItemId(items[0].id);
@@ -45,7 +42,6 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
     
     try {
       if (type === MovementType.IN && isNewItem) {
-        // Create NEW Item Logic
         if (!newItemName.trim()) throw new Error("Debes escribir el nombre del objeto.");
         
         const newItem: InventoryItem = {
@@ -53,15 +49,14 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
           name: newItemName,
           category: newItemCategory,
           quantity: quantity,
-          obtainedBy: { username: currentUser, role: 'USER' } as any, // Simple user object mapping
+          obtainedBy: { username: currentUser, role: 'USER' } as any,
           dateAcquired: new Date().toISOString(),
           rarity: newItemRarity,
-          value: newItemValue
+          value: unitPrice // Store Unit Price
         };
 
         saveInventoryItem(newItem, true, currentUser);
       } else {
-        // Update EXISTING Item Logic
         if (!selectedItemId) throw new Error("Selecciona un objeto de la lista o crea uno nuevo.");
         updateStock(selectedItemId, quantity, type, currentUser, reason);
       }
@@ -74,15 +69,17 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
   };
 
   const handleClose = () => {
-    // Reset form
     setQuantity(1);
     setReason('');
     setIsNewItem(false);
     setNewItemName('');
-    setNewItemValue(0);
+    setUnitPrice(0);
     setError('');
     onClose();
   };
+
+  // Calculate total for preview
+  const estimatedTotal = unitPrice * quantity;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -95,7 +92,6 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Type Selection */}
           <div className="flex gap-4">
             <button
               type="button"
@@ -121,7 +117,6 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
             </button>
           </div>
 
-          {/* New vs Existing Toggle (Only for IN) */}
           {type === MovementType.IN && (
             <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-700">
               <button
@@ -141,9 +136,7 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
             </div>
           )}
 
-          {/* ITEM SELECTION / CREATION */}
           {!isNewItem ? (
-            // EXISTING ITEM SELECTOR
             <div>
               <label className="block text-slate-400 text-sm font-medium mb-1">
                 {items.length === 0 ? 'No hay objetos registrados' : 'Seleccionar Objeto'}
@@ -157,23 +150,19 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
                 {items.length === 0 && <option value="">Inventario vacío</option>}
                 {items.map(item => (
                   <option key={item.id} value={item.id}>
-                    {item.name} (Stock Actual: {item.quantity})
+                    {item.name} (Stock: {item.quantity})
                   </option>
                 ))}
               </select>
-              {type === MovementType.OUT && (
-                 <p className="text-xs text-slate-500 mt-1">Selecciona de la lista lo que vas a retirar.</p>
-              )}
             </div>
           ) : (
-            // NEW ITEM FORM
             <div className="space-y-4 animate-in fade-in slide-in-from-top-2 border border-indigo-500/30 bg-indigo-500/5 p-4 rounded-xl">
                <div>
-                <label className="block text-slate-400 text-sm font-medium mb-1">Nombre del Nuevo Objeto</label>
+                <label className="block text-slate-400 text-sm font-medium mb-1">Nombre del Objeto</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej: Madera de Roble, Espada Maestra..."
+                  placeholder="Ej: Madera de Roble T5"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
                   className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
@@ -194,7 +183,7 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-sm font-medium mb-1">Rareza</label>
+                  <label className="block text-slate-400 text-sm font-medium mb-1">Tier (Nivel)</label>
                   <select
                     value={newItemRarity}
                     onChange={(e) => setNewItemRarity(e.target.value as Rarity)}
@@ -208,19 +197,27 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
               </div>
 
               <div>
-                <label className="block text-slate-400 text-sm font-medium mb-1">Valor Estimado (Opcional)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={newItemValue}
-                  onChange={(e) => setNewItemValue(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
-                />
+                <label className="block text-slate-400 text-sm font-medium mb-1">Precio Unitario</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={unitPrice}
+                    onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
+                    className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-indigo-500 font-mono"
+                  />
+                  <Coins className="absolute left-3 top-1/2 -translate-y-1/2 text-yellow-500" size={16} />
+                </div>
+                {unitPrice > 0 && quantity > 0 && (
+                   <div className="text-right text-xs text-yellow-500 mt-1 font-mono">
+                     Total Calculado: {formatCurrency(estimatedTotal)}
+                   </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Common Fields */}
           <div>
             <label className="block text-slate-400 text-sm font-medium mb-1">Cantidad</label>
             <input
@@ -237,7 +234,7 @@ const MovementModal: React.FC<MovementModalProps> = ({ isOpen, onClose, items, c
             <label className="block text-slate-400 text-sm font-medium mb-1">Motivo (Opcional)</label>
             <input
               type="text"
-              placeholder={type === MovementType.IN ? "Ej: Compra, Recolección..." : "Ej: Venta, Uso, Pérdida..."}
+              placeholder={type === MovementType.IN ? "Ej: Recolección, Crafting..." : "Ej: Venta, Uso..."}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"

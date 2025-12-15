@@ -76,6 +76,12 @@ export const saveInventoryItem = (item: InventoryItem, isNew: boolean, user: str
   localStorage.setItem(KEYS.INVENTORY, JSON.stringify(items));
 };
 
+export const editInventoryItem = (updatedItem: InventoryItem) => {
+  let items = getInventory();
+  items = items.map(i => i.id === updatedItem.id ? updatedItem : i);
+  localStorage.setItem(KEYS.INVENTORY, JSON.stringify(items));
+};
+
 export const updateStock = (itemId: string, quantityChange: number, type: MovementType, user: string, reason: string) => {
   const items = getInventory();
   const itemIndex = items.findIndex(i => i.id === itemId);
