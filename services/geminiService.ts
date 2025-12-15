@@ -5,9 +5,11 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const analyzeInventory = async (items: InventoryItem[]): Promise<string> => {
   try {
-    const summary = items.map(i => 
-      `- ${i.name} (${i.category}, ${i.rarity}): ${i.quantity} unidades (Obtenido por: ${i.obtainedBy.name})`
-    ).join('\n');
+    const summary = items.map(i => {
+      // Fix: Handle both User (username) and Player (name) types for obtainedBy
+      const obtainedByName = 'name' in i.obtainedBy ? i.obtainedBy.name : i.obtainedBy.username;
+      return `- ${i.name} (${i.category}, ${i.rarity}): ${i.quantity} unidades (Obtenido por: ${obtainedByName})`;
+    }).join('\n');
 
     const prompt = `
       Actúa como un "Maestro de Gremio" experto en logística de juegos RPG.

@@ -13,6 +13,17 @@ export enum Rarity {
   LEGENDARY = 'Legendario'
 }
 
+export enum Role {
+  ADMIN = 'ADMIN',
+  USER = 'USER'
+}
+
+export interface User {
+  username: string;
+  role: Role;
+  password?: string; // In a real app, this would be hashed. Storing plain for demo.
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -25,10 +36,27 @@ export interface InventoryItem {
   name: string;
   category: ItemCategory;
   quantity: number;
-  obtainedBy: Player;
+  obtainedBy: Player | User; // Can be a game character or a system user
   dateAcquired: string; // ISO Date string
   rarity: Rarity;
   value: number; // Gold value estimate
+}
+
+export enum MovementType {
+  IN = 'ENTRADA',
+  OUT = 'SALIDA',
+  CREATE = 'CREACIÓN'
+}
+
+export interface Movement {
+  id: string;
+  itemId: string;
+  itemName: string;
+  type: MovementType;
+  quantity: number;
+  user: string; // Username who performed the action
+  date: string;
+  reason?: string;
 }
 
 export interface FilterState {
