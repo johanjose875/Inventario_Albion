@@ -1,78 +1,952 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- IMPORTANTE: Base href permite que la app funcione en subdirectorios de GitHub Pages -->
-    <base href="./" />
-    <title>GuildVault - Inventario del Juego</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuildVault - Inventario RPG</title>
     
-    <!-- Polyfill para evitar que la app se rompa si process.env no existe en el navegador -->
+    <!-- Estilos y Librerías -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Configuración para evitar errores de process.env en navegador -->
     <script>
-      window.process = window.process || { env: { API_KEY: '' } };
+        window.process = { env: { API_KEY: '' } };
     </script>
 
     <style>
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: #0f172a; /* Slate 900 */
-        color: #e2e8f0; /* Slate 200 */
-        overflow-x: hidden;
-      }
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #1e293b;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #475569;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #64748b;
-      }
-      
-      /* Subtle Background Animation */
-      .animated-bg {
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-        background-size: 200% 200%;
-        animation: gradientBG 15s ease infinite;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: -1;
-      }
-
-      @keyframes gradientBG {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; overflow-x: hidden; }
+        .animated-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            background-size: 200% 200%;
+            animation: gradientBG 15s ease infinite;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+        }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
-  <script type="importmap">
+
+    <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
     "recharts": "https://esm.sh/recharts@^3.6.0"
   }
 }
 </script>
 </head>
-  <body>
+<body class="min-h-screen pb-20">
     <div class="animated-bg"></div>
-    <div id="root"></div>
-    <!-- Si usas Vite, el entry point se inyecta aquí automáticamente, o descomenta esto si usas un entorno manual -->
-    <!-- <script type="module" src="/index.tsx"></script> -->
-  </body>
+
+    <!-- VISTA LOGIN -->
+    <div id="login-view" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="bg-indigo-600 w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
+                    <i data-lucide="gamepad-2" class="text-white w-8 h-8"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white mb-2">GuildVault</h1>
+                <p class="text-slate-400">Sistema de Gestión de Inventario</p>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-slate-400 text-sm font-medium mb-1">Usuario</label>
+                    <input type="text" id="username" required class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm font-medium mb-1">Contraseña</label>
+                    <input type="password" id="password" required class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <p id="login-error" class="text-red-400 text-sm text-center hidden"></p>
+                <button type="submit" id="btn-login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="log-in" class="w-4 h-4"></i> Iniciar Sesión
+                </button>
+                <button type="button" id="btn-register-mode" class="w-full border border-slate-600 hover:bg-slate-700 text-slate-300 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Crear Cuenta
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- VISTA DASHBOARD -->
+    <div id="dashboard-view" class="hidden fade-in">
+        <!-- Navbar -->
+        <nav class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-indigo-600 p-2 rounded-lg shadow-lg">
+                            <i data-lucide="gamepad-2" class="text-white w-6 h-6"></i>
+                        </div>
+                        <span class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent hidden sm:inline-block">GuildVault</span>
+                    </div>
+                    
+                    <div class="hidden md:flex space-x-2" id="nav-tabs">
+                        <button onclick="switchTab('INVENTORY')" id="nav-inventory" class="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-indigo-400 bg-slate-800">
+                            <i data-lucide="layout-grid" class="w-4 h-4"></i> Inventario
+                        </button>
+                        <button onclick="switchTab('MOVEMENTS')" id="nav-movements" class="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-slate-400 hover:text-white">
+                            <i data-lucide="history" class="w-4 h-4"></i> Movimientos
+                        </button>
+                        <button onclick="switchTab('USERS')" id="nav-users" class="hidden px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-slate-400 hover:text-white">
+                            <i data-lucide="users" class="w-4 h-4"></i> Usuarios
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <div class="text-right hidden sm:block">
+                            <div class="text-xs text-slate-400">Hola,</div>
+                            <div id="user-display" class="text-sm font-bold text-white">Usuario</div>
+                        </div>
+                        <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Contenido Principal -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- TAB INVENTARIO -->
+            <div id="tab-inventory" class="space-y-6">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg flex items-center gap-4">
+                        <div class="p-4 rounded-full bg-blue-500 bg-opacity-20"><i data-lucide="package" class="text-blue-400 w-6 h-6"></i></div>
+                        <div><p class="text-sm text-slate-400 font-medium uppercase">Total Objetos</p><h3 id="stat-total-qty" class="text-2xl font-bold text-white">0</h3></div>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg flex items-center gap-4">
+                        <div class="p-4 rounded-full bg-yellow-500 bg-opacity-20"><i data-lucide="coins" class="text-yellow-400 w-6 h-6"></i></div>
+                        <div><p class="text-sm text-slate-400 font-medium uppercase">Valor Total</p><h3 id="stat-total-val" class="text-2xl font-bold text-white">0</h3></div>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg flex items-center gap-4">
+                        <div class="p-4 rounded-full bg-purple-500 bg-opacity-20"><i data-lucide="trophy" class="text-purple-400 w-6 h-6"></i></div>
+                        <div><p class="text-sm text-slate-400 font-medium uppercase">Tipos de Items</p><h3 id="stat-types" class="text-2xl font-bold text-white">0</h3></div>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg flex items-center gap-4">
+                        <div class="p-4 rounded-full bg-emerald-500 bg-opacity-20"><i data-lucide="users" class="text-emerald-400 w-6 h-6"></i></div>
+                        <div><p class="text-sm text-slate-400 font-medium uppercase">Top Contribuyente</p><h3 id="stat-top-user" class="text-2xl font-bold text-white">-</h3></div>
+                    </div>
+                </div>
+
+                <!-- AI Advisor -->
+                <div class="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-xl border border-indigo-700/50 p-6 relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4 relative z-10">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-indigo-500 rounded-lg shadow-lg"><i data-lucide="sparkles" class="text-white w-5 h-5"></i></div>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Oráculo del Gremio (IA)</h3>
+                                <p class="text-indigo-200 text-sm">Análisis estratégico con Gemini</p>
+                            </div>
+                        </div>
+                        <button onclick="analyzeInventory()" id="btn-analyze" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors font-medium">
+                            <i data-lucide="bot" class="w-4 h-4"></i> Analizar
+                        </button>
+                    </div>
+                    <div id="ai-result" class="text-slate-300 text-sm whitespace-pre-wrap hidden bg-slate-900/50 p-4 rounded-lg border border-indigo-500/30"></div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                        <h3 class="text-lg font-semibold text-white mb-4">Distribución por Categoría</h3>
+                        <div class="h-64 relative"><canvas id="chart-categories"></canvas></div>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+                        <h3 class="text-lg font-semibold text-white mb-4">Cantidad por Tier</h3>
+                        <div class="h-64 relative"><canvas id="chart-rarity"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Filters & Actions -->
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 sticky top-20 z-30 shadow-xl backdrop-blur-md bg-opacity-95">
+                    <div class="flex flex-col md:flex-row gap-4 justify-between">
+                        <div class="flex flex-col sm:flex-row flex-1 gap-4">
+                            <div class="flex-1 relative">
+                                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
+                                <input type="text" id="filter-search" placeholder="Buscar objeto..." oninput="renderTable()" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                            <select id="filter-category" onchange="renderTable()" class="bg-slate-900 text-white border border-slate-700 rounded-lg px-3 py-2 outline-none">
+                                <option value="All">Todas las Categorías</option>
+                                <option value="Arma">Arma</option>
+                                <option value="Armadura">Armadura</option>
+                                <option value="Material">Material</option>
+                                <option value="Consumible">Consumible</option>
+                                <option value="Objeto Clave">Objeto Clave</option>
+                            </select>
+                        </div>
+                        <button onclick="openModal('modal-movement')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-bold shadow-lg flex items-center justify-center gap-2">
+                            <i data-lucide="package-plus" class="w-5 h-5"></i> Registrar Movimiento
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700 shadow-xl">
+                    <table class="w-full text-left border-collapse min-w-[800px]">
+                        <thead>
+                            <tr class="border-b border-slate-700 bg-slate-900/50 text-slate-400 text-sm">
+                                <th class="p-4">Objeto</th>
+                                <th class="p-4">Tier</th>
+                                <th class="p-4">Categoría</th>
+                                <th class="p-4 text-center">Cantidad</th>
+                                <th class="p-4">Jugador</th>
+                                <th class="p-4">Fecha</th>
+                                <th class="p-4 text-right">Valor Total</th>
+                                <th class="p-4 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-body">
+                            <!-- Rows generated by JS -->
+                        </tbody>
+                    </table>
+                    <div id="empty-state" class="hidden text-center py-20">
+                        <i data-lucide="box" class="mx-auto text-slate-600 mb-4 w-12 h-12"></i>
+                        <h3 class="text-xl text-slate-300 font-medium">Inventario Vacío</h3>
+                        <p class="text-slate-500">Registra un movimiento para comenzar.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB MOVIMIENTOS -->
+            <div id="tab-movements" class="hidden">
+                <div class="bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
+                    <div class="p-6 border-b border-slate-700"><h2 class="text-xl font-bold text-white">Historial de Movimientos</h2></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-900/50 text-slate-400 text-sm">
+                                    <th class="p-4">Tipo</th>
+                                    <th class="p-4">Objeto</th>
+                                    <th class="p-4 text-center">Cantidad</th>
+                                    <th class="p-4">Usuario</th>
+                                    <th class="p-4">Motivo</th>
+                                    <th class="p-4 text-right">Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movements-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+             <!-- TAB USUARIOS -->
+             <div id="tab-users" class="hidden">
+                <div class="bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
+                    <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="shield" class="text-indigo-400 w-5 h-5"></i> Gestión de Usuarios</h2>
+                        <span class="text-xs text-slate-500">Solo administradores</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-900/50 text-slate-400 text-sm">
+                                    <th class="p-4">Usuario</th>
+                                    <th class="p-4">Rol</th>
+                                    <th class="p-4 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MODAL MOVIMIENTO -->
+    <div id="modal-movement" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden fade-in">
+        <div class="bg-slate-800 rounded-2xl w-full max-w-lg border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800 sticky top-0">
+                <h2 class="text-xl font-bold text-white">Registrar Movimiento</h2>
+                <button onclick="closeModal('modal-movement')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <form id="form-movement" class="p-6 space-y-5">
+                <div class="flex gap-4">
+                    <button type="button" onclick="setMovType('IN')" id="btn-type-in" class="flex-1 py-3 rounded-lg border flex items-center justify-center gap-2 font-medium bg-emerald-500/20 border-emerald-500 text-emerald-400">
+                        <i data-lucide="arrow-down-left" class="w-5 h-5"></i> Entrada
+                    </button>
+                    <button type="button" onclick="setMovType('OUT')" id="btn-type-out" class="flex-1 py-3 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-700 flex items-center justify-center gap-2 font-medium">
+                        <i data-lucide="arrow-up-right" class="w-5 h-5"></i> Salida
+                    </button>
+                </div>
+                
+                <div id="mov-item-select-container">
+                    <label class="block text-slate-400 text-sm font-medium mb-1">Seleccionar Objeto</label>
+                    <select id="mov-item-select" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                        <!-- Options filled by JS -->
+                    </select>
+                </div>
+
+                <div id="mov-new-item-toggle" class="flex bg-slate-900 p-1 rounded-lg border border-slate-700">
+                     <button type="button" onclick="setNewItemMode(false)" id="btn-mode-existing" class="flex-1 py-1.5 text-sm rounded font-medium bg-slate-700 text-white shadow">Existente</button>
+                     <button type="button" onclick="setNewItemMode(true)" id="btn-mode-new" class="flex-1 py-1.5 text-sm rounded font-medium text-slate-400 hover:text-white">Nuevo Objeto</button>
+                </div>
+
+                <div id="mov-new-item-fields" class="hidden space-y-4 border border-indigo-500/30 bg-indigo-500/5 p-4 rounded-xl">
+                    <div>
+                        <label class="block text-slate-400 text-sm font-medium mb-1">Nombre</label>
+                        <input type="text" id="new-item-name" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-400 text-sm font-medium mb-1">Categoría</label>
+                            <select id="new-item-category" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                                <option value="Material">Material</option>
+                                <option value="Arma">Arma</option>
+                                <option value="Armadura">Armadura</option>
+                                <option value="Consumible">Consumible</option>
+                                <option value="Objeto Clave">Objeto Clave</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 text-sm font-medium mb-1">Tier</label>
+                            <select id="new-item-tier" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                                <option value="Tier 1">Tier 1</option>
+                                <option value="Tier 2">Tier 2</option>
+                                <option value="Tier 3">Tier 3</option>
+                                <option value="Tier 4">Tier 4</option>
+                                <option value="Tier 5">Tier 5</option>
+                                <option value="Tier 6">Tier 6</option>
+                                <option value="Tier 7">Tier 7</option>
+                                <option value="Tier 8">Tier 8</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm font-medium mb-1">Precio Unitario</label>
+                        <div class="relative">
+                            <input type="number" id="new-item-price" min="0" placeholder="0" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg pl-10 pr-4 py-2 font-mono outline-none">
+                            <i data-lucide="coins" class="absolute left-3 top-1/2 -translate-y-1/2 text-yellow-500 w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 text-sm font-medium mb-1">Cantidad</label>
+                    <input type="number" id="mov-qty" min="1" value="1" required class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 font-mono text-lg outline-none">
+                </div>
+                <div>
+                    <label class="block text-slate-400 text-sm font-medium mb-1">Motivo</label>
+                    <input type="text" id="mov-reason" placeholder="Opcional" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                </div>
+
+                <button type="submit" class="w-full py-3 rounded-lg font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">Confirmar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR -->
+    <div id="modal-edit" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden fade-in">
+        <div class="bg-slate-800 rounded-2xl w-full max-w-lg border border-slate-700 shadow-2xl">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-white">Editar Objeto</h2>
+                <button onclick="closeModal('modal-edit')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <form id="form-edit" class="p-6 space-y-4">
+                <input type="hidden" id="edit-id">
+                <div>
+                    <label class="block text-slate-400 text-sm font-medium mb-1">Nombre</label>
+                    <input type="text" id="edit-name" required class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm font-medium mb-1">Categoría</label>
+                        <select id="edit-category" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                             <option value="Material">Material</option>
+                             <option value="Arma">Arma</option>
+                             <option value="Armadura">Armadura</option>
+                             <option value="Consumible">Consumible</option>
+                             <option value="Objeto Clave">Objeto Clave</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm font-medium mb-1">Tier</label>
+                        <select id="edit-tier" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                             <option value="Tier 1">Tier 1</option>
+                             <option value="Tier 2">Tier 2</option>
+                             <option value="Tier 3">Tier 3</option>
+                             <option value="Tier 4">Tier 4</option>
+                             <option value="Tier 5">Tier 5</option>
+                             <option value="Tier 6">Tier 6</option>
+                             <option value="Tier 7">Tier 7</option>
+                             <option value="Tier 8">Tier 8</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 text-sm font-medium mb-1">Precio Unitario</label>
+                        <input type="number" id="edit-price" min="0" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 font-mono outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 text-sm font-medium mb-1">Cantidad (Corrección)</label>
+                        <input type="number" id="edit-qty" min="0" class="w-full bg-slate-900 text-white border border-slate-700 rounded-lg px-4 py-2 font-mono outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-2 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-500 mt-4">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- LOGICA APP -->
+    <script type="module">
+        import { GoogleGenAI } from "https://esm.sh/@google/genai@^1.33.0";
+
+        // --- ESTADO GLOBAL ---
+        const state = {
+            currentUser: null,
+            inventory: [],
+            movements: [],
+            users: [],
+            currentTab: 'INVENTORY'
+        };
+
+        const KEYS = { USERS: 'gv_users', INV: 'gv_inv', MOV: 'gv_mov' };
+        
+        // --- CONSTANTES ---
+        const RARITY_COLORS = {
+            'Tier 1': 'text-slate-400 bg-slate-400/10 border-slate-400/20',
+            'Tier 2': 'text-green-400 bg-green-400/10 border-green-400/20',
+            'Tier 3': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
+            'Tier 4': 'text-purple-400 bg-purple-400/10 border-purple-400/20',
+            'Tier 5': 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
+            'Tier 6': 'text-orange-400 bg-orange-400/10 border-orange-400/20',
+            'Tier 7': 'text-red-400 bg-red-400/10 border-red-400/20',
+            'Tier 8': 'text-pink-400 bg-pink-400/10 border-pink-400/20',
+        };
+
+        let charts = { category: null, rarity: null };
+        let isRegistering = false;
+        let movType = 'IN';
+        let isNewItemMode = false;
+
+        // --- INICIALIZACIÓN ---
+        window.onload = () => {
+            initStorage();
+            lucide.createIcons();
+            
+            // Event Listeners Globales
+            document.getElementById('login-form').onsubmit = handleLogin;
+            document.getElementById('btn-register-mode').onclick = toggleRegisterMode;
+            document.getElementById('form-movement').onsubmit = handleMovementSubmit;
+            document.getElementById('form-edit').onsubmit = handleEditSubmit;
+            
+            // Check session
+            const storedUser = sessionStorage.getItem('gv_session');
+            if(storedUser) {
+                state.currentUser = JSON.parse(storedUser);
+                loadData();
+                showDashboard();
+            }
+        };
+
+        // --- STORAGE ---
+        function initStorage() {
+            if(!localStorage.getItem(KEYS.USERS)) {
+                localStorage.setItem(KEYS.USERS, JSON.stringify([{username: 'admin', password: 'admin', role: 'ADMIN'}]));
+            }
+            if(!localStorage.getItem(KEYS.INV)) localStorage.setItem(KEYS.INV, '[]');
+            if(!localStorage.getItem(KEYS.MOV)) localStorage.setItem(KEYS.MOV, '[]');
+        }
+
+        function loadData() {
+            state.users = JSON.parse(localStorage.getItem(KEYS.USERS) || '[]');
+            state.inventory = JSON.parse(localStorage.getItem(KEYS.INV) || '[]');
+            state.movements = JSON.parse(localStorage.getItem(KEYS.MOV) || '[]');
+        }
+
+        // --- AUTH ---
+        window.toggleRegisterMode = () => {
+            isRegistering = !isRegistering;
+            const btn = document.getElementById('btn-login');
+            const modeBtn = document.getElementById('btn-register-mode');
+            btn.innerHTML = isRegistering ? '<i data-lucide="user-plus" class="w-4 h-4"></i> Registrarse' : '<i data-lucide="log-in" class="w-4 h-4"></i> Iniciar Sesión';
+            modeBtn.textContent = isRegistering ? '¿Ya tienes cuenta? Inicia Sesión' : 'Crear Cuenta';
+            document.getElementById('login-error').classList.add('hidden');
+            lucide.createIcons();
+        }
+
+        window.handleLogin = (e) => {
+            e.preventDefault();
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const errorEl = document.getElementById('login-error');
+            
+            initStorage();
+            const users = JSON.parse(localStorage.getItem(KEYS.USERS));
+
+            if(isRegistering) {
+                if(users.find(u => u.username === user)) {
+                    errorEl.textContent = 'El usuario ya existe';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+                const newUser = { username: user, password: pass, role: 'USER' };
+                users.push(newUser);
+                localStorage.setItem(KEYS.USERS, JSON.stringify(users));
+                loginSuccess(newUser);
+            } else {
+                const found = users.find(u => u.username === user && u.password === pass);
+                if(found) loginSuccess(found);
+                else {
+                    errorEl.textContent = 'Credenciales inválidas';
+                    errorEl.classList.remove('hidden');
+                }
+            }
+        }
+
+        function loginSuccess(user) {
+            state.currentUser = user;
+            sessionStorage.setItem('gv_session', JSON.stringify(user));
+            loadData();
+            showDashboard();
+        }
+
+        window.logout = () => {
+            state.currentUser = null;
+            sessionStorage.removeItem('gv_session');
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        // --- NAVIGATION ---
+        function showDashboard() {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            document.getElementById('user-display').textContent = state.currentUser.username;
+            
+            if(state.currentUser.role === 'ADMIN') {
+                document.getElementById('nav-users').classList.remove('hidden');
+            } else {
+                document.getElementById('nav-users').classList.add('hidden');
+            }
+            
+            switchTab('INVENTORY');
+        }
+
+        window.switchTab = (tab) => {
+            state.currentTab = tab;
+            
+            // Style tabs
+            ['INVENTORY', 'MOVEMENTS', 'USERS'].forEach(t => {
+                const btn = document.getElementById('nav-' + t.toLowerCase());
+                if(btn) {
+                    if(t === tab) btn.className = 'px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-indigo-400 bg-slate-800 shadow-inner';
+                    else btn.className = 'px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-slate-400 hover:text-white';
+                }
+                const content = document.getElementById('tab-' + t.toLowerCase());
+                if(content) content.classList.add('hidden');
+            });
+
+            document.getElementById('tab-' + tab.toLowerCase()).classList.remove('hidden');
+
+            if(tab === 'INVENTORY') renderInventory();
+            if(tab === 'MOVEMENTS') renderMovements();
+            if(tab === 'USERS') renderUsers();
+        }
+
+        // --- RENDER INVENTORY ---
+        function renderInventory() {
+            const tbody = document.getElementById('inventory-body');
+            const search = document.getElementById('filter-search').value.toLowerCase();
+            const cat = document.getElementById('filter-category').value;
+            
+            tbody.innerHTML = '';
+            
+            const filtered = state.inventory.filter(item => {
+                return item.name.toLowerCase().includes(search) && (cat === 'All' || item.category === cat);
+            });
+
+            if(filtered.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+            } else {
+                document.getElementById('empty-state').classList.add('hidden');
+                filtered.forEach(item => {
+                    const totalVal = item.quantity * item.value;
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors group';
+                    tr.innerHTML = `
+                        <td class="p-4"><span class="font-semibold text-slate-200">${item.name}</span></td>
+                        <td class="p-4"><span class="text-xs px-2 py-0.5 rounded border ${RARITY_COLORS[item.rarity] || 'text-slate-400'}">${item.rarity}</span></td>
+                        <td class="p-4 text-slate-300">${item.category}</td>
+                        <td class="p-4 text-center"><span class="bg-slate-900 px-2 py-1 rounded font-mono font-bold">${item.quantity}</span></td>
+                        <td class="p-4 text-slate-300">${item.obtainedBy.username || item.obtainedBy.name}</td>
+                        <td class="p-4 text-slate-400 text-sm">${new Date(item.dateAcquired).toLocaleDateString()}</td>
+                        <td class="p-4 text-right">
+                            <div class="text-yellow-500 font-mono font-bold">${formatCurrency(totalVal)} 🟡</div>
+                            <div class="text-xs text-slate-500">(${formatCurrency(item.value)} c/u)</div>
+                        </td>
+                        <td class="p-4 text-center">
+                            <button onclick="openEditModal('${item.id}')" class="p-2 text-slate-400 hover:text-white hover:bg-indigo-600 rounded-lg transition-all">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            renderStats(filtered);
+            renderCharts(filtered);
+            lucide.createIcons();
+        }
+
+        // --- HELPERS ---
+        function formatCurrency(val) {
+            if(val >= 1000000000) return (val/1000000000).toFixed(1) + 'B';
+            if(val >= 1000000) return (val/1000000).toFixed(1) + 'M';
+            if(val >= 1000) return (val/1000).toFixed(1) + 'K';
+            return val.toLocaleString();
+        }
+
+        function renderStats(items) {
+            const totalQty = items.reduce((acc, i) => acc + i.quantity, 0);
+            const totalVal = items.reduce((acc, i) => acc + (i.quantity * i.value), 0);
+            
+            // Top User
+            const contrib = {};
+            items.forEach(i => {
+                const name = i.obtainedBy.username || i.obtainedBy.name;
+                contrib[name] = (contrib[name] || 0) + i.quantity;
+            });
+            let topUser = '-', max = -1;
+            Object.entries(contrib).forEach(([k,v]) => { if(v > max) { max = v; topUser = k; }});
+
+            document.getElementById('stat-total-qty').innerText = formatCurrency(totalQty);
+            document.getElementById('stat-total-val').innerText = formatCurrency(totalVal);
+            document.getElementById('stat-types').innerText = items.length;
+            document.getElementById('stat-top-user').innerText = topUser;
+        }
+
+        function renderCharts(items) {
+            // Data Prep
+            const cats = {};
+            const tiers = {};
+            items.forEach(i => {
+                cats[i.category] = (cats[i.category] || 0) + i.quantity;
+                tiers[i.rarity] = (tiers[i.rarity] || 0) + i.quantity;
+            });
+
+            // Destroy old
+            if(charts.category) charts.category.destroy();
+            if(charts.rarity) charts.rarity.destroy();
+
+            // Create Category Chart (Pie)
+            const ctxCat = document.getElementById('chart-categories').getContext('2d');
+            charts.category = new Chart(ctxCat, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(cats),
+                    datasets: [{
+                        data: Object.values(cats),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { color: '#94a3b8' } } }
+                }
+            });
+
+            // Create Rarity Chart (Bar)
+            const ctxRar = document.getElementById('chart-rarity').getContext('2d');
+            charts.rarity = new Chart(ctxRar, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(tiers),
+                    datasets: [{
+                        label: 'Cantidad',
+                        data: Object.values(tiers),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // --- MOVEMENTS & MODALS ---
+        window.openModal = (id) => {
+            document.getElementById(id).classList.remove('hidden');
+            if(id === 'modal-movement') {
+                setMovType('IN');
+                populateItemSelect();
+                setNewItemMode(false);
+            }
+        }
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+        window.setMovType = (type) => {
+            movType = type;
+            const btnIn = document.getElementById('btn-type-in');
+            const btnOut = document.getElementById('btn-type-out');
+            
+            if(type === 'IN') {
+                btnIn.className = 'flex-1 py-3 rounded-lg border flex items-center justify-center gap-2 font-medium bg-emerald-500/20 border-emerald-500 text-emerald-400';
+                btnOut.className = 'flex-1 py-3 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-700 flex items-center justify-center gap-2 font-medium';
+                document.getElementById('mov-new-item-toggle').classList.remove('hidden');
+            } else {
+                btnIn.className = 'flex-1 py-3 rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-700 flex items-center justify-center gap-2 font-medium';
+                btnOut.className = 'flex-1 py-3 rounded-lg border flex items-center justify-center gap-2 font-medium bg-red-500/20 border-red-500 text-red-400';
+                document.getElementById('mov-new-item-toggle').classList.add('hidden');
+                setNewItemMode(false);
+            }
+        }
+
+        window.setNewItemMode = (isNew) => {
+            isNewItemMode = isNew;
+            const btnEx = document.getElementById('btn-mode-existing');
+            const btnNew = document.getElementById('btn-mode-new');
+            const selectContainer = document.getElementById('mov-item-select-container');
+            const newFields = document.getElementById('mov-new-item-fields');
+
+            if(isNew) {
+                btnNew.className = 'flex-1 py-1.5 text-sm rounded font-medium bg-indigo-600 text-white shadow';
+                btnEx.className = 'flex-1 py-1.5 text-sm rounded font-medium text-slate-400 hover:text-white';
+                selectContainer.classList.add('hidden');
+                newFields.classList.remove('hidden');
+            } else {
+                btnEx.className = 'flex-1 py-1.5 text-sm rounded font-medium bg-slate-700 text-white shadow';
+                btnNew.className = 'flex-1 py-1.5 text-sm rounded font-medium text-slate-400 hover:text-white';
+                selectContainer.classList.remove('hidden');
+                newFields.classList.add('hidden');
+            }
+        }
+
+        function populateItemSelect() {
+            const select = document.getElementById('mov-item-select');
+            select.innerHTML = '';
+            if(state.inventory.length === 0) {
+                 const op = document.createElement('option');
+                 op.text = 'Inventario vacío';
+                 select.appendChild(op);
+                 return;
+            }
+            state.inventory.forEach(i => {
+                const op = document.createElement('option');
+                op.value = i.id;
+                op.text = `${i.name} (Stock: ${i.quantity})`;
+                select.appendChild(op);
+            });
+        }
+
+        window.handleMovementSubmit = (e) => {
+            e.preventDefault();
+            const qty = parseInt(document.getElementById('mov-qty').value);
+            const reason = document.getElementById('mov-reason').value;
+            const date = new Date().toISOString();
+
+            if(movType === 'IN' && isNewItemMode) {
+                const name = document.getElementById('new-item-name').value;
+                const cat = document.getElementById('new-item-category').value;
+                const tier = document.getElementById('new-item-tier').value;
+                const price = parseFloat(document.getElementById('new-item-price').value) || 0;
+
+                const newItem = {
+                    id: Date.now().toString(),
+                    name, category: cat, rarity: tier, value: price,
+                    quantity: qty,
+                    obtainedBy: { username: state.currentUser.username },
+                    dateAcquired: date
+                };
+                
+                state.inventory.push(newItem);
+                addMovement(newItem.id, newItem.name, 'CREACIÓN', qty, reason);
+            } else {
+                const id = document.getElementById('mov-item-select').value;
+                const item = state.inventory.find(i => i.id === id);
+                if(!item) return;
+
+                if(movType === 'OUT' && item.quantity < qty) {
+                    alert('No hay suficiente stock');
+                    return;
+                }
+
+                item.quantity = movType === 'IN' ? item.quantity + qty : item.quantity - qty;
+                addMovement(item.id, item.name, movType === 'IN' ? 'ENTRADA' : 'SALIDA', qty, reason);
+            }
+
+            saveData();
+            closeModal('modal-movement');
+            renderInventory();
+        }
+
+        function addMovement(itemId, itemName, type, qty, reason) {
+            state.movements.unshift({
+                id: Date.now().toString(),
+                itemId, itemName, type, quantity: qty,
+                user: state.currentUser.username,
+                date: new Date().toISOString(),
+                reason
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem(KEYS.INV, JSON.stringify(state.inventory));
+            localStorage.setItem(KEYS.MOV, JSON.stringify(state.movements));
+            localStorage.setItem(KEYS.USERS, JSON.stringify(state.users));
+        }
+
+        // --- MOVEMENT HISTORY RENDER ---
+        function renderMovements() {
+            const tbody = document.getElementById('movements-body');
+            tbody.innerHTML = '';
+            state.movements.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-700/50 hover:bg-slate-700/30';
+                
+                let typeBadge = '';
+                if(m.type === 'ENTRADA') typeBadge = '<span class="text-emerald-400 flex gap-1"><i data-lucide="arrow-down-left" class="w-4 h-4"></i> Entrada</span>';
+                else if(m.type === 'SALIDA') typeBadge = '<span class="text-red-400 flex gap-1"><i data-lucide="arrow-up-right" class="w-4 h-4"></i> Salida</span>';
+                else typeBadge = '<span class="text-blue-400 flex gap-1"><i data-lucide="plus" class="w-4 h-4"></i> Creación</span>';
+
+                tr.innerHTML = `
+                    <td class="p-4">${typeBadge}</td>
+                    <td class="p-4 text-slate-200">${m.itemName}</td>
+                    <td class="p-4 text-center font-mono text-slate-300">${m.quantity}</td>
+                    <td class="p-4 text-slate-300">${m.user}</td>
+                    <td class="p-4 text-slate-400 italic text-sm">${m.reason || '-'}</td>
+                    <td class="p-4 text-right text-slate-500 text-sm">${new Date(m.date).toLocaleString()}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        // --- EDIT LOGIC ---
+        window.openEditModal = (id) => {
+            const item = state.inventory.find(i => i.id === id);
+            if(!item) return;
+            
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('edit-name').value = item.name;
+            document.getElementById('edit-category').value = item.category;
+            document.getElementById('edit-tier').value = item.rarity;
+            document.getElementById('edit-price').value = item.value;
+            document.getElementById('edit-qty').value = item.quantity;
+            
+            openModal('modal-edit');
+        }
+
+        window.handleEditSubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const item = state.inventory.find(i => i.id === id);
+            if(item) {
+                item.name = document.getElementById('edit-name').value;
+                item.category = document.getElementById('edit-category').value;
+                item.rarity = document.getElementById('edit-tier').value;
+                item.value = parseFloat(document.getElementById('edit-price').value) || 0;
+                item.quantity = parseInt(document.getElementById('edit-qty').value) || 0;
+                saveData();
+                renderInventory();
+                closeModal('modal-edit');
+            }
+        }
+
+        // --- USER MANAGEMENT ---
+        function renderUsers() {
+            const tbody = document.getElementById('users-body');
+            tbody.innerHTML = '';
+            state.users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-700/50';
+                const roleBadge = u.role === 'ADMIN' 
+                    ? '<span class="text-indigo-400 bg-indigo-500/20 px-2 py-1 rounded text-xs font-bold border border-indigo-500/30">ADMIN</span>'
+                    : '<span class="text-slate-400 bg-slate-600/20 px-2 py-1 rounded text-xs font-medium">USER</span>';
+                
+                let actions = '';
+                if(u.username !== 'admin' && u.username !== state.currentUser.username) {
+                    actions = `<button onclick="toggleAdmin('${u.username}')" class="text-xs px-3 py-1.5 rounded border border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/10">Cambiar Rol</button>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-4 font-medium text-slate-200">${u.username}</td>
+                    <td class="p-4">${roleBadge}</td>
+                    <td class="p-4 text-right">${actions}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.toggleAdmin = (username) => {
+             const u = state.users.find(user => user.username === username);
+             if(u) {
+                 u.role = u.role === 'ADMIN' ? 'USER' : 'ADMIN';
+                 saveData();
+                 renderUsers();
+             }
+        }
+
+        // --- GEMINI AI ---
+        window.analyzeInventory = async () => {
+             const btn = document.getElementById('btn-analyze');
+             const resultDiv = document.getElementById('ai-result');
+             
+             if(process.env.API_KEY === '') {
+                 alert('Error: API Key no configurada. (process.env.API_KEY)');
+                 return;
+             }
+
+             btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Pensando...';
+             resultDiv.classList.add('hidden');
+
+             try {
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const summary = state.inventory.map(i => `- ${i.name} (${i.category}, ${i.rarity}): ${i.quantity} unid.`).join('\n');
+                
+                const prompt = `Actúa como maestro de gremio RPG. Analiza brevemente (3 párrafos max) este inventario:\n${summary}\n1. ¿Estamos listos para la guerra?\n2. ¿Qué falta?\n3. Recomendación estratégica.`;
+                
+                const response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash',
+                    contents: prompt,
+                });
+                
+                resultDiv.textContent = response.text;
+                resultDiv.classList.remove('hidden');
+
+             } catch(e) {
+                 console.error(e);
+                 alert('Error al conectar con la IA');
+             } finally {
+                 btn.innerHTML = '<i data-lucide="bot" class="w-4 h-4"></i> Analizar';
+                 lucide.createIcons();
+             }
+        }
+
+        // Hacer funciones accesibles globalmente
+        window.renderInventory = renderInventory;
+        window.renderMovements = renderMovements;
+        window.renderUsers = renderUsers;
+    </script>
+</body>
 </html>
