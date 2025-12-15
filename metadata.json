@@ -1,0 +1,5 @@
+{
+  "name": "GuildVault - Inventario RPG",
+  "description": "Panel de control avanzado para la gestión de inventarios de gremios en juegos RPG. Incluye análisis de IA, gráficos de distribución y seguimiento de jugadores.",
+  "requestFramePermissions": []
+}
